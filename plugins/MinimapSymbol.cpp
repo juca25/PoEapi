@@ -179,7 +179,7 @@ public:
         if (e->rarity >= 2) {
             if (show_beast && e->is_beast) {
                 if (std::regex_search(e->name(), valuable_beasts))
-                    poe->draw_text(e->name(), x, y + 10, 0xC70039, 0x0c0c0c, 1.0, 1);
+                    poe->draw_text(e->name(), x, y + 10, 0xC70039, 0x0c0c0c, 1.5, 1.5);
                 else
                     poe->draw_text(e->name(), x, y + 10, 0xffff52, 0x0c0c0c, 1.0, 1);
             } else if (index == 3 && show_life) {
