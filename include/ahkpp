@@ -1,0 +1,135 @@
+/* ahkpp, 9/6/2020 1:29 PM */
+
+#ifndef AHKPP
+#define AHKPP 1
+
+#include <functional>
+#include <string>
+#include <tuple>
+#include <unordered_map>
+#include <vector>
+
+using namespace std;
+
+#define DLLEXPORT extern "C" __declspec(dllexport)
+
+struct ihash {
+    std::size_t operator()(const wstring& s) const noexcept {
+        wchar_t data[s.size()];
+        for (int i = 0; i < s.size(); ++i)
+            data[i] = tolower(s[i]);
+
+        return hash<wstring>{}(wstring(data, s.size()));
+    }
+};
+
+struct iequal_to {
+    bool operator()(const wstring& s1, const wstring& s2) const noexcept {
+        return !_wcsicmp(s1.c_str(), s2.c_str());
+    }
+};
+
+enum AhkType {
+    AhkVoid,
+    AhkChar,        // signed char
+    AhkShort,       // signed short
+    AhkInt,         // signed int
+    AhkUChar,       // unsigned char
+    AhkUShort,      // unsigned short
+    AhkUInt,        // unsigned int
+    AhkInt64,       // long long int
+    AhkString,      // char*
+    AhkWString,     // wchar_t*
+    AhkFloat,       // float
+    AhkDouble,      // double
+    AhkPointer,     // pointer
+    AhkObject,      // object pointer
+    AhkStringPtr,   // string* or string&
+    AhkWStringPtr,  // wstring* or wstring&
+    AhkBool,        // bool
+};
+
+/* AutoHotkey object reference */
+class AhkObjRef;
+
+/* AutoHotkey object wrapper class */
+class AhkObj {
+public:
+
+    using Property = std::tuple<void*, AhkType>;
+    using MethodType = void* (AhkObj::*)();
+    using ParamList = std::vector<AhkType>;
+    using Method = std::tuple<void*, MethodType, AhkType, ParamList>;
+
+    AhkObjRef* obj_ref;
+    wstring type_name;
+    std::unordered_map<wstring, Property, ihash, iequal_to> properties;   // property name is case sensitive,
+    std::unordered_map<wstring, Method, ihash, iequal_to> methods;        // as above
+
+    AhkObj(const wstring type_name = L"");
+    AhkObj(AhkObjRef* obj_ref);
+    virtual ~AhkObj();
+    virtual void __init();
+    virtual void __new();
+
+    virtual operator AhkObjRef*();
+    bool add_property(const wstring& key, void* value, AhkType type);
+    bool remove_property(const wstring& key);
+    bool add_method(const wstring& name,                // method name, case sensitive
+                    void* obj,                          // object pointer
+                    MethodType fn,                      // member function pointer
+                    AhkType return_type = AhkInt,       // return type (treat void as AhkInt)
+                    ParamList params = ParamList{});    // parameter types, up to 8 parameters
+    bool remove_method(const wstring& name);
+
+    void* get(const wchar_t* key) __attribute__((optimize(0)));
+    void set(const wchar_t* key, void* value);
+
+    void __get(const wchar_t* key, void* value, AhkType type);
+    void __set(const wchar_t* key, ...);            // __set(key, value, type, [key, value, type, ...] 0);
+    void* __call(const wchar_t* method_name, ...);  // __call(name, type, arg, [type, arg, ...] 0);
+    void __get(const char* key, void* value, AhkType type);
+    void __set(const char* key, ...);               // __set(key, value, type, [key, value, type, ...] 0);
+    void* __call(const char* method_name, ...);     // __call(name, type, arg, [type, arg, ...] 0);
+};
+
+class AhkTempObj : public AhkObj {
+public:
+
+    AhkTempObj(const wstring type_name = L"");
+    ~AhkTempObj();
+    operator AhkObjRef*();
+};
+
+/* Global AutoHotkey object index table */
+extern std::unordered_map<AhkObjRef*, AhkObj*> ahkpp_stubs;
+
+/* AutoHotkey object manipulating callbacks */
+extern AhkObjRef* (*ahk_new)(const wchar_t*, const wchar_t*);
+extern void (*ahk_delete)(AhkObjRef*);
+extern void* (*ahk_get)(AhkObjRef*, const wchar_t*);
+extern void (*ahk_set)(AhkObjRef*, const wchar_t*, va_list);
+extern void* (*ahk_call)(AhkObjRef*, const wchar_t*, va_list);
+extern void ahk_register(const wstring type_name);
+
+DLLEXPORT void ahkpp_set_callbacks(AhkObjRef* (*__new)(const wchar_t*, const wchar_t*),
+                                   void (*__delete)(AhkObjRef*),
+                                   void* (*__get)(AhkObjRef*, const wchar_t*),
+                                   void (*__set)(AhkObjRef*, const wchar_t*, va_list),
+                                   void* (*__call)(AhkObjRef*, const wchar_t*, va_list));
+DLLEXPORT wchar_t* ahkpp_version(void);
+DLLEXPORT void ahkpp_register(const wchar_t* type_name,         // class name, case sensitive
+                              const wchar_t* basetype_name,     // base class name, as above
+                              std::function<AhkObj*()> fn);     // function to return a new object
+DLLEXPORT void ahkpp_unregister(const wchar_t* type_name);
+DLLEXPORT AhkObjRef* ahkpp_new(AhkObjRef* ahkobj_ref, const wchar_t* type_name);
+DLLEXPORT void* ahkpp_get(AhkObjRef* ahkobj_ref, const wchar_t* key);
+DLLEXPORT void ahkpp_set(AhkObjRef* ahkobj_ref, const wchar_t* key, void* value);
+DLLEXPORT void* ahkpp_call(AhkObjRef* ahkobj_ref, const wchar_t* method_name, ...);
+DLLEXPORT void ahkpp_delete(AhkObjRef* ahkobj_ref);
+DLLEXPORT void ahkpp_set_var(const wchar_t* name, ...);
+DLLEXPORT void ahkpp_get_var(const wchar_t* name, void* value, AhkType type);
+DLLEXPORT void ahkpp_get_value(void* value, void* val_ptr, AhkType type);
+DLLEXPORT AhkObjRef* ahkpp_get_stubs();
+
+#endif /* AHKPP */
