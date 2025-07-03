@@ -99,7 +99,7 @@ public:
         ignored_delve_chests(L"Armour|Weapon|Generic|NoDrops|Encounter"),
         heist_regex(L"HeistChest(Secondary|RewardRoom(Agility|BruteForce|CounterThaumaturge|Deception|Demolition|Engineering|LockPicking|Perception|TrapDisarmament|))(.*)(Military|Robot|Science|Thug)"),
         ignored_heist_chests(L"Armour|Weapons|Corrupted|Gems|Jewellery|Jewels|QualityCurrency|Talisman|Trinkets|Uniques"),
-        valuable_beasts(L"Vivid Vulture|Wild Bristle Matron|Craicic Chimeral|Wild Hellion Alpha|Vivid Watcher"),
+        valuable_beasts(L"((?i)id w|k m|cic c|le m|id v|ld h|d bra|ul, f|l pla|s, f|n, f| cy|al, f"),
         valuable_strongboxes(L"Cartographer|Divination|Scarab|VaalTempleChest")
     {
         add_property(L"showMonsters", &show_monsters, AhkBool);
